@@ -1,0 +1,241 @@
+<template>
+    <template if:true={screen2}>
+        <div class="slds-var-m-around_medium">
+            <lightning-card title="Object Mapping" icon-name="utility:lightning_extension">
+                <div class="slds-grid slds-wrap">
+                    <!-- Salesforce Standard Object Dropdown -->
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Salesforce Standard Object"
+                            options={objectOptions}
+                            placeholder="Select an object"
+                            onchange={handleSalesforceObjectChange}>
+                        </lightning-combobox>
+                    </div>
+    
+                    <!-- Middleware Object Dropdown -->
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Middleware Object"
+                            options={middlewareObjectOptions}
+                            placeholder="Select a middleware object"
+                            onchange={handleMiddlewareObjectChange}>
+                        </lightning-combobox>
+                    </div>
+    
+                    <!-- Map Button -->
+                    <div class="slds-size_1-of-1 slds-var-p-around_medium">
+                        <lightning-button
+                            label="Map"
+                            variant="brand"
+                            onclick={handleMapButtonClick}>
+                        </lightning-button>
+                    </div>
+    
+                </div>
+            </lightning-card>
+        </div>
+    </template>
+
+    <template if:true={screen3}>
+        <div class="slds-var-m-around_medium">
+            <lightning-card title="Field Mapping" icon-name="utility:lightning_extension">
+                <div class="slds-grid slds-wrap">
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Salesforce Object Field"
+                            options={salesforceObjectFields}
+                            placeholder="Select a Salesforce object field"
+                            onchange={handleSalesforceFieldChange}>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Third Party Object Field"
+                            options={middlewareObjectFields}
+                            placeholder="Select a middleware object field"
+                            onchange={handleMiddlewareFieldChange}>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-size_1-of-1 slds-var-p-around_medium">
+                        <lightning-button
+                            label="Map"
+                            variant="brand"
+                            onclick={handleMapButtonClick}>
+                        </lightning-button>
+                    </div>
+
+                    </div>
+            </lightning-card>
+        </div>
+    </template>
+</template>
+
+
+// secondScreen.js
+import { LightningElement, wire } from 'lwc';
+import getStandardObjects from '@salesforce/apex/ObjectMetadataController.getStandardObjects';
+import fetchFields from '@salesforce/apex/ObjectMetadataController.fetchFields';
+
+export default class SecondScreen extends LightningElement {
+    objectOptions = [];
+    middlewareObjectOptions = [
+        { 
+            label: 'User (Middleware)', 
+            value: 'User', 
+            fields: [
+                { apiName: 'Id', label: 'ID', dataType: 'string', required: true },
+                { apiName: 'Name', label: 'Name', dataType: 'string', required: true },
+                { apiName: 'Email', label: 'Email', dataType: 'email', required: false }
+            ]
+        },
+        { 
+            label: 'Post (Middleware)', 
+            value: 'Post', 
+            fields: [
+                { apiName: 'Id', label: 'ID', dataType: 'string', required: true },
+                { apiName: 'Title', label: 'Title', dataType: 'string', required: true },
+                { apiName: 'Body', label: 'Body', dataType: 'textarea', required: false }
+            ]
+        }
+        // Add more middleware objects as needed
+    ];
+    
+    screen2 = true;
+    screen3 = false;
+    selectedSalesforceObject = '';
+    selectedMiddlewareObject = '';
+    salesforceObjectFields = [];
+    middlewareObjectFields = [];
+
+    handleSalesforceObjectChange(event) {
+      //  if (this.screen2) {
+            // When screen2 is true, store the selected Salesforce object name
+            this.selectedSalesforceObject = event.detail.value;
+            console.log('Success1');
+            console.log(this.selectedSalesforceObject);
+       // } else if (this.screen3) {
+            console.log('Step1');
+            // When screen3 is true, fetch the fields of the selected Salesforce object
+            fetchFields({ objectApiName: event.detail.value })
+                .then(result => {
+                    this.salesforceObjectFields = result.map(field => ({
+                        label: field.label,
+                        value: field.apiName
+                    }));
+                })
+                .catch(error => {
+                    console.error(error);
+                });
+        //}
+    }
+
+    handleMiddlewareObjectChange(event) {
+       // if(this.screen2){ //Screen 2 (Fetching Fields of the selected Object)
+            this.selectedMiddlewareObject = event.detail.value;
+            console.log('Success2');
+            console.log(this.selectedMiddlewareObject);
+       // }
+
+       // if(this.screen3){ //Screen 3 (Fetching Fields of selected Object)
+            if (this.selectedMiddlewareObject) {
+                console.log('Step2');
+                this.middlewareObjectFields = this.middlewareObjectOptions
+                    .find(obj => obj.value === this.selectedMiddlewareObject)
+                    .fields.map(field => ({ label: field.label, value: field.apiName }));
+            } else {
+                this.middlewareObjectFields = [];
+            }
+       // }
+    }
+
+    handleMapButtonClick() {
+        if (this.selectedSalesforceObject && this.selectedMiddlewareObject) {
+            // Handle logic for moving to Screen 3 and any other necessary actions
+            this.screen2 = false;
+            this.screen3 = true;
+        } else {
+            // Show an error message or perform any other validation
+            console.error('Please select Salesforce and Middleware objects before mapping.');
+        }
+    }
+
+    @wire(getStandardObjects)
+    wiredStandardObjects({ data, error }) {
+        if (data) {
+            this.objectOptions = data.map(obj => ({
+                label: obj.label,
+                value: obj.apiName
+            }));
+        } else if (error) {
+            console.error(error);
+        }
+    }
+}
+
+
+public with sharing class ObjectMetadataController {
+    // Method to get a list of standard object names and labels
+    @AuraEnabled(cacheable=true)
+    public static List<ObjectMetadata> getStandardObjects() {
+        List<ObjectMetadata> objectList = new List<ObjectMetadata>();
+
+        // Get all standard objects
+        Map<String, Schema.SObjectType> gd = Schema.getGlobalDescribe();
+
+        for (String objectName : gd.keySet()) {
+            Schema.SObjectType objectType = gd.get(objectName);
+            Schema.DescribeSObjectResult describeResult = objectType.getDescribe();
+
+            // Check if the object is a standard object
+            if (describeResult.isCustom() == false) {
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.apiName = describeResult.getName();
+                metadata.label = describeResult.getLabel();
+
+                objectList.add(metadata);
+            }
+        }
+
+        return objectList;
+    }
+
+    // Method to get fields of a specific object
+    @AuraEnabled(cacheable=true)
+    public static List<ObjectFieldMetadata> fetchFields(String objectApiName) {
+        List<ObjectFieldMetadata> fieldList = new List<ObjectFieldMetadata>();
+
+        Schema.SObjectType objectType = Schema.getGlobalDescribe().get(objectApiName);
+        Schema.DescribeSObjectResult describeResult = objectType.getDescribe();
+
+        for (Schema.SObjectField field : describeResult.fields.getMap().values()) {
+            Schema.DescribeFieldResult fieldResult = field.getDescribe();
+
+            ObjectFieldMetadata fieldMetadata = new ObjectFieldMetadata();
+            fieldMetadata.apiName = fieldResult.getName();
+            fieldMetadata.label = fieldResult.getLabel();
+            fieldMetadata.dataType = String.valueOf(fieldResult.getType());
+            fieldMetadata.required = fieldResult.isNillable();
+
+            fieldList.add(fieldMetadata);
+        }
+
+        return fieldList;
+    }
+
+    // Wrapper class to hold object metadata
+    public class ObjectMetadata {
+        @AuraEnabled public String apiName;
+        @AuraEnabled public String label;
+    }
+
+    // Wrapper class to hold object field metadata
+    public class ObjectFieldMetadata {
+        @AuraEnabled public String apiName;
+        @AuraEnabled public String label;
+        @AuraEnabled public String dataType;
+        @AuraEnabled public Boolean required;
+    }
+}
