@@ -1,0 +1,158 @@
+<template>
+    <template if:true={screen1}>
+        <lightning-card title="Integration Configuration" class="slds-var-p-around_medium" icon-name="utility:apex_plugin">
+            <div class="slds-var-p-bottom_large slds-var-p-left_large" style="width:300px">
+                <lightning-input label="Integration-ID" name="Integration-ID" onchange={handleInputChange} required="true"></lightning-input>
+                <lightning-input label="Client-Key" name="Client-Key" onchange={handleInputChange} required="true"></lightning-input>
+                <lightning-input label="Client-Secret" name="Client-Secret" onchange={handleInputChange} required="true"></lightning-input>
+                <lightning-messages></lightning-messages>
+                <div class="slds-var-m-top_medium">
+                    <lightning-button type="submit" name="submit" label="Generate Token" variant="brand" onclick={handleButtonClick}></lightning-button>
+                </div>
+            </div>
+        </lightning-card>
+    </template>
+    <template if:true={screen2}>
+        <lightning-card title="Object Mapping" icon-name="utility:lightning_extension">
+        <div class="slds-grid slds-wrap">
+            <template for:each={MiddleWareObjectMappings} for:item="element" for:index="index">
+            <div key={element.integrationObjectNameSF} class="slds-size_5-of-12 slds-var-p-around_medium">
+                <div key={element.integrationObjectNameSF} class="slds-box">
+                    <p><lightning-formatted-text value={element.integrationObjectNameSF}></lightning-formatted-text></p>
+                </div>
+            </div>
+            <div key={element.integrationObjectNameSF} class="slds-size_1-of-12 slds-var-p-around_small slds-align_absolute-center">
+                <lightning-icon icon-name="utility:forward" size="small"></lightning-icon>
+            </div>
+            <div key={element.integrationObjectNameMW} class="slds-size_5-of-12 slds-var-p-around_medium">
+                <div key={element.integrationObjectNameSF} class="slds-box">
+                    <p><lightning-formatted-text value={element.integrationObjectNameMW}></lightning-formatted-text></p>
+                </div>
+            </div>
+            <div key={element.integrationObjectNameSF} class="slds-size_1-of-12 slds-var-p-around_small slds-align_absolute-center">
+                <lightning-button-icon
+                    icon-name="utility:forward"
+                    variant="brand"
+                    alternative-text="Map"
+                    data-index={index}
+                    onclick={handlerFetchedMappingField}>
+                </lightning-button-icon>
+            </div>
+            </template>
+        </div>
+        <div class="slds-var-m-around_medium">
+            
+                <div class="slds-grid slds-wrap">
+                    <!-- Salesforce Standard Object Dropdown -->
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Salesforce Standard Object"
+                            options={objectOptions}
+                            placeholder="Select an object"
+                            onchange={handleSalesforceObjectChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+    
+                    <!-- Middleware Object Dropdown -->
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Middleware Object"
+                            options={middlewareObjectOptions}
+                            placeholder="Select a middleware object"
+                            onchange={handleMiddlewareObjectChange}
+                            required>
+                        </lightning-combobox>
+                    </div>
+    
+                    <!-- Map Button -->
+                    <div class="slds-size_1-of-1 slds-var-p-around_medium">
+                        <lightning-button
+                            label="Next"
+                            variant="brand"
+                            onclick={handleMapButtonClick}>
+                        </lightning-button>
+                    </div>
+    
+                </div>
+            
+        </div>
+    </lightning-card>
+    </template>
+
+    <template if:true={screen3}>
+        <div class="slds-var-m-around_medium">
+            <lightning-card title="Field Mapping" icon-name="utility:lightning_extension">
+                <div class="slds-grid slds-wrap">
+                    <!-- <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Salesforce Object Field"
+                            options={salesforceObjectFields}
+                            placeholder="Select a Salesforce object field"
+                            onchange={handleFieldSelectionSalesforce}>
+                        </lightning-combobox>
+                    </div>
+
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-combobox
+                            label="Third Party Object Field"
+                            options={middlewareObjectFields}
+                            placeholder="Select a middleware object field"
+                            onchange={handleFieldSelectionMiddleware}>
+                        </lightning-combobox>
+                    </div> -->
+                    
+                    <!-- Dynamically added dropdowns -->
+                    <template for:each={dropdownList} for:item="element" for:index="index">
+                        <!-- Salesforce Object Field Dropdown -->
+                        <div key={element.key.countSF} class="slds-size_1-of-2 slds-var-p-around_medium">
+                            <lightning-combobox
+                                label="Salesforce Object Field"
+                                options={element.key.optionsSF}
+                                value={element.key.SF}
+                                placeholder="Select a Salesforce field"
+                                onchange={handleAdditionalSalesforceFieldChange}
+                                data-count={element.key.countSF}
+                                data-index={index}
+                                required
+                            ></lightning-combobox>
+                        </div>
+                    
+                        <!-- Middleware Object Field Dropdown -->
+                        <div key={element.key.countMW} class="slds-size_1-of-2 slds-var-p-around_medium">
+                            <lightning-combobox
+                                label="Third Party Object Field"
+                                options={element.key.optionsMW}
+                                placeholder="Select a middleware field"
+                                value={element.key.MW}
+                                onchange={handleAdditionalMiddlewareFieldChange}
+                                data-count={element.key.countMW}
+                                data-index={index}
+                                required
+                            ></lightning-combobox>
+                        </div>
+                    </template>
+                    
+
+                     <!-- button add dynamic field -->
+                     <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-button
+                            label="Add Field"
+                            variant="brand"
+                            onclick={handleAddFieldMappingClick}>
+                        </lightning-button>
+                    </div>
+
+                    <div class="slds-size_1-of-2 slds-var-p-around_medium">
+                        <lightning-button
+                            label="Map Field"
+                            variant="brand"
+                            onclick={handleMapObjectButtonClick}>
+                        </lightning-button>
+                    </div>
+                    
+                    </div>
+            </lightning-card>
+        </div>
+    </template>
+</template>
